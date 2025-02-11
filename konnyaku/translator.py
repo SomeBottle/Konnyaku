@@ -2,6 +2,8 @@
 翻译模块
 """
 
+import re
+
 from konnyaku.subs import Sub
 from konnyaku.llm import LLM
 from konnyaku.config import (
@@ -13,6 +15,7 @@ from konnyaku.errors import (
     TRLimitException,
     TranslateError,
     SummarizeError,
+    TranslateMismatchException,
 )
 from konnyaku.utils import RetrySleeper
 
@@ -23,7 +26,11 @@ class Translator:
     """
 
     def __init__(
-        self, sub: Sub, trans_llm: LLM, summary_llm: LLM, bgm_subject_info: str = None
+        self,
+        sub: Sub,
+        trans_llm: LLM,
+        summary_llm: LLM | None,
+        bgm_subject_info: str = None,
     ):
         """
         初始化
@@ -62,9 +69,13 @@ class Translator:
 
         sys_prompt += (
             "字幕片段以 <sub> 开头，以 </sub> 结尾，每行格式为 [编号]一句台词 。\n"
-            f"台词中的换行符已经用 {self.sub.line_break_holder} 替代，请保留。\n"
-            "在翻译后你**必须**以同样的格式返回。\n"
-            '如果输入的 <sub> 或 </sub> 有缺失，**必须**仅返回"f"。\n'
+            "【字幕翻译规则】\n"
+            "* 在翻译后**必须**以同样的格式返回。\n"
+            '* 如果输入的 <sub> 或 </sub> 有缺失，**必须**仅返回"f"。\n'
+            f"* 台词中的换行符已经用 {self.sub.line_break_holder} 替代，请保留。\n\n"
+            "【片假名翻译规则】\n"
+            "1. 当背景知识和上下文中存在片假名对应的中文译名时，直接使用该中文名称\n"
+            "2. 当片假名找不到中文译名时，必须转换为**英文字母**拼写的**罗马音**\n"
         )
 
         messages.append({"role": "system", "content": sys_prompt})
@@ -117,13 +128,17 @@ class Translator:
         :raises SummarizeError: 摘要出错
         :return: 摘要文本
         """
+        # 没有指定摘要模型就不总结
+        if not self.summary_llm:
+            return ""
+
         print("Summarizing~")
         # 摘要总结系统提示词
         SUMMARY_SYSTEM_PROMPT = (
             "你是擅长剧情总结的助理。\n"
-            "你需要根据用户给出的<摘要>和<台词>（台词一行一句），以**精炼扼要**的语言总结为**一句话**，要求能涵盖剧情要点，切记**不要**丢掉之前摘要中的要点。\n"
-            "台词中的 \\N 可以忽略。\n"
-            "请注意，你的输出**必须**以<summary>开头，以</summary>结尾。\n"
+            "你需要根据用户给出的<摘要>和<台词>（台词一行一句），以**精炼扼要**的语言总结为**一句话**，要求能涵盖剧情要点和基本角色，切记**要保留之前摘要的内容**。\n"
+            "* 输出内容大纲：“(列出**所有出现的角色名**) ... (发生了什么) ... (角色们之前干了什么) ... (角色们接下来要做什么)”\n"
+            "* 请注意，你的输出**必须**以<summary>开头，以</summary>结尾\n"
         )
 
         messages = [{"role": "system", "content": SUMMARY_SYSTEM_PROMPT}]
@@ -135,6 +150,8 @@ class Translator:
 
         prompt_text += "<台词>\n"
         for line in sub_lines:
+            # 总结时把台词中的 \N 替换为空格
+            line = line.replace(r"\N", " ")
             prompt_text += f"{line}\n"
         prompt_text += "</台词>\n"
 
@@ -148,14 +165,16 @@ class Translator:
             max_retry_times=3, max_wait_before_retry=100, start_wait_time=60
         )
 
+        summary_pattern = re.compile(r"<summary>([\s\S]+?)</summary>")
+
         while True:
             try:
                 response = self.summary_llm.call(messages)
-                if not response.startswith("<summary>") or not response.endswith(
-                    "</summary>"
-                ):
+                matches = summary_pattern.match(response)
+                if not matches:
                     raise SummarizeError("Unexpected response format.")
-
+                # 提取摘要
+                response = matches.group(1)
                 break
             except RateLimitException:
                 if rate_sleeper.sleep():
@@ -173,9 +192,6 @@ class Translator:
                     )
             except Exception as e:
                 raise SummarizeError(e)
-
-        # 去掉 <summary> 标签
-        response = response.replace("<summary>", "").replace("</summary>", "")
 
         return response
 
@@ -208,11 +224,24 @@ class Translator:
 
         # 取出一批进行翻译
         while processed_lines < sub_len:
-            sub_lines = self.sub.get_lines(processed_lines, lines_per_request)
+            numbered_sub_lines = self.sub.get_numbered_lines(
+                processed_lines, lines_per_request
+            )
 
             # 生成提示词
             messages = self._gen_prompt()
-            messages.append({"role": "user", "content": f"<sub>\n{sub_lines}\n</sub>"})
+
+            # 把上一批的最后三行加入提示词，防止上下文主语丢失
+            numbered_last_three_lines = self.sub.tail_translated(n=3, numbered=True)
+            if len(numbered_last_three_lines) > 0:
+                txt = "\n".join(numbered_last_three_lines)
+                messages.append(
+                    {"role": "assistant", "content": f"<sub>\n{txt}\n</sub>"}
+                )
+
+            messages.append(
+                {"role": "user", "content": f"<sub>\n{numbered_sub_lines}\n</sub>"}
+            )
 
             try:
                 response = self.trans_llm.call(messages)
@@ -239,36 +268,61 @@ class Translator:
                         )
                     continue
 
-                translated_lines = response.split("\n")
+                numbered_translated_lines = response.split("\n")
 
                 # 没有头
-                if len(translated_lines) < 2 or "<sub>" not in translated_lines[0]:
+                if (
+                    len(numbered_translated_lines) < 2
+                    or "<sub>" not in numbered_translated_lines[0]
+                ):
                     print(f"Unexpected response: {response}...Retry...(╥﹏╥)")
                     continue
 
-                translated_lines = translated_lines[1:]  # 去除首行 <sub>
+                numbered_translated_lines = numbered_translated_lines[
+                    1:
+                ]  # 去除首行 <sub>
+
+                # 最后一行的序号应该是这个
+                expected_last_index = (
+                    min(processed_lines + lines_per_request, sub_len) - 1
+                )
 
                 # 别忘了，也可能超出输出限制
                 # 检查翻译结果是否有头有尾
-                if "</sub>" not in translated_lines[-1]:
+                if "</sub>" not in numbered_translated_lines[-1]:
                     # 超出输出限制导致截断
                     # 把已经翻译的部分加入结果，注意倒数两行都不能要
                     # 因为不知道最后两行是不是完整的
-                    translated_lines = translated_lines[:-2]
-                    self.sub.append_translated(translated_lines)
+                    numbered_translated_lines = numbered_translated_lines[:-2]
+                    self.sub.append_translated(
+                        numbered_translated_lines, expected_last_index
+                    )
                     # 退避翻译的行数
-                    lines_per_request = len(translated_lines)
+                    lines_per_request = len(numbered_translated_lines)
                     print("Output was truncated, will request less lines...(๑•́︿•̀๑)")
                 else:
                     # 正常情况
-                    translated_lines = translated_lines[:-1]
-                    self.sub.append_translated(translated_lines)
+                    numbered_translated_lines = numbered_translated_lines[:-1]
+                    self.sub.append_translated(
+                        numbered_translated_lines, expected_last_index
+                    )
 
-                # 解析带编号行，准备生成摘要
-                parsed_lines = [
-                    line["text"] for line in self.sub.parse_lines(translated_lines)
-                ]
-                self.summary_text = self._summarize(parsed_lines)
+                if processed_lines + lines_per_request < sub_len:
+                    # 不是最后一批，还需要生成摘要
+                    # 解析带编号行，准备生成摘要
+                    parsed_lines = [
+                        line["text"]
+                        for line in self.sub.parse_numbered_lines(
+                            numbered_translated_lines
+                        )
+                    ]
+                    self.summary_text = self._summarize(parsed_lines)
+
+            except TranslateMismatchException as e:
+                # 漏翻了，修正 processed_lines，重新翻译漏翻的部分
+                print(f"Translate line mismatch: {e}, fixing...")
+                processed_lines = e.next_index
+                continue
 
             except SummarizeError as e:
                 print(f"Summarize error: {e}, this may not be a big problem.")
@@ -295,7 +349,9 @@ class Translator:
 
             processed_lines += lines_per_request
 
-            print(f"Translated {processed_lines}/{sub_len} lines.(ノ´∀`)ノ")
+            print(
+                f"Translated {min(processed_lines,sub_len)}/{sub_len} lines.(ノ´∀`)ノ"
+            )
 
         # 最后把翻译的行写回字幕
         self.sub.bake_translated()

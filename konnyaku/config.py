@@ -27,6 +27,14 @@ LLM_TEMPERATURE = environ.get("KYK_LLM_TEMPERATURE", 1.3)
 LLM_API_STREAMING = environ.get("KYK_LLM_API_STREAMING", "0") == "1"
 
 
+# 摘要生成模型的配置（可以不配置）
+SUMMARY_LLM_API_KEY = environ.get("KYK_SUM_LLM_API_KEY")
+SUMMARY_LLM_API_BASE_URL = environ.get("KYK_SUM_LLM_API_BASE_URL", None)
+SUMMARY_LLM_MODEL = environ.get("KYK_SUM_LLM_MODEL")
+SUMMARY_LLM_TEMPERATURE = environ.get("KYK_SUM_LLM_TEMPERATURE", 1.3)
+SUMMARY_LLM_API_STREAMING = environ.get("KYK_SUM_LLM_API_STREAMING", "0") == "1"
+
+
 # 主要用于抓取动画番剧基本信息，给大模型翻译提供背景信息
 # 如果留空则不会有这些背景知识
 # Bangumi.tv API Key
@@ -35,11 +43,11 @@ BANGUMI_API_KEY = environ.get("KYK_BANGUMI_API_KEY")
 # 翻译系统提示词
 TRANSLATE_SYSTEM_PROMPT = (
     "你是动漫高手，熟练掌握了多国语言。\n"
-    "你需要把用户给出的动画字幕片段中的台词翻译为中文，尽量翻译得通顺自然，保持连贯性，符合二次元文化的表达方式。\n"
+    "你需要把用户给出的动画字幕片段中的台词翻译为中文，尽量翻译得通顺自然，保持上下文连贯性，并符合二次元文化的表达方式。\n"
 )
 
 # 一次翻译多少行字幕
-TRANSLATE_LINES_PER_REQUEST = 30
+TRANSLATE_LINES_PER_REQUEST = 50
 
 
 # 检查配置项
@@ -50,3 +58,4 @@ def check_config():
         raise ValueError("KYK_LLM_API_BASE_URL is not set")
     if not LLM_MODEL:
         raise ValueError("KYK_LLM_MODEL is not set")
+    

@@ -86,8 +86,6 @@ class BangumiAPI:
         :return: 角色名列表 [{relation: str, name: str, name_chs: str, gender: str}, ...]
         :raises requests.HTTPError: 请求异常
         """
-        RATE_LIMIT = 10  # 每经过多少次请求就休息一下
-
         characters = self.get_subject_characters(subject_id)
         character_ids = []
         # 临时存储角色在番剧中的关系
@@ -101,10 +99,6 @@ class BangumiAPI:
         result = []
         request_count = 0
         for character_id in character_ids:
-            if (request_count + 1) % RATE_LIMIT == 0:
-                # 休息一下
-                print("Let me take a break...ε-(´-ᗜ-`;)", end="\r")
-                sleep(1)
 
             print(
                 f"Getting character info ...({request_count + 1}/{len(character_ids)})",

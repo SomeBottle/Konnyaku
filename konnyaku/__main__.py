@@ -1,4 +1,4 @@
-import sys
+import argparse
 
 from konnyaku.config import (
     check_config,
@@ -7,6 +7,11 @@ from konnyaku.config import (
     LLM_MODEL,
     LLM_TEMPERATURE,
     LLM_API_STREAMING,
+    SUMMARY_LLM_API_BASE_URL,
+    SUMMARY_LLM_API_KEY,
+    SUMMARY_LLM_MODEL,
+    SUMMARY_LLM_TEMPERATURE,
+    SUMMARY_LLM_API_STREAMING,
 )
 from konnyaku.subs import Sub
 from konnyaku.translator import Translator
@@ -15,22 +20,44 @@ from konnyaku.utils import extract_bangumi_info
 from konnyaku.errors import TranslateError
 
 if __name__ == "__main__":
-    check_config()
+    arg_parser = argparse.ArgumentParser(
+        usage="python -m konnyaku [-h] [-o OUTPUT] input [bgm_subject_id]"
+    )
 
-    if len(sys.argv) < 2:
-        print("Usage: python -m konnyaku <subtitle file> [bangumi subject id]")
-        exit(1)
+    # 添加位置参数
+    arg_parser.add_argument(
+        "input", type=str, help="Input subtitle file path (srt or ass)", nargs=1
+    )
+    arg_parser.add_argument(
+        "bgm_subject_id", type=str, help="Bangumi subject id", nargs="?"
+    )
+
+    # 添加可选参数
+    arg_parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        default="output_chs.ass",
+        help="Output subtitle file path",
+    )
+
+    args = arg_parser.parse_args()
+
+    # 检查配置
+    check_config()
 
     # 看看有没有 Bangumi Subject ID
     bangumi_subject_id = None
-    if len(sys.argv) == 3:
-        bangumi_subject_id = sys.argv[2]
+    if args.bgm_subject_id:
+        bangumi_subject_id = args.bgm_subject_id
+
+    # 输出文件路径
 
     # 字幕文件
-    subtitle_file_path = sys.argv[1]
+    subtitle_file_path = args.input[0]
     try:
         sub = Sub(subtitle_file_path)
-    except FileNotFoundError | ValueError as e:
+    except (FileNotFoundError, ValueError) as e:
         print(e)
         exit(1)
 
@@ -53,7 +80,17 @@ if __name__ == "__main__":
         temperature=LLM_TEMPERATURE,
         streaming=LLM_API_STREAMING,
     )
-    summary_llm = translator_llm
+
+    summary_llm = None
+
+    if SUMMARY_LLM_API_KEY:
+        summary_llm = LLM(
+            api_key=SUMMARY_LLM_API_KEY,
+            base_url=SUMMARY_LLM_API_BASE_URL,
+            model=SUMMARY_LLM_MODEL,
+            temperature=SUMMARY_LLM_TEMPERATURE,
+            streaming=SUMMARY_LLM_API_STREAMING,
+        )
 
     translator = Translator(
         sub,
@@ -72,4 +109,4 @@ if __name__ == "__main__":
         exit(1)
 
     print("Exporting...(´∀`)")
-    sub.export("output_chs.ass")
+    sub.export(args.output)
