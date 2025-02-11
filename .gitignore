@@ -1,3 +1,5 @@
 test_*.sh
+test_*.ass
+test_*.srt
 test.py
 *.pyc
