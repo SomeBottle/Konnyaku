@@ -1,5 +1,12 @@
 # Konnyaku
+
+![Konnyaku](./image/translate_konnyaku.jpg)  
+
 A simple and **robust** LLM workflow for anime subtitle file translation.
+
+## 演示视频
+
+https://github.com/user-attachments/assets/3f720a85-c7bd-4363-88f1-fa260ca937bd
 
 ## 特色
 
@@ -29,10 +36,24 @@ A simple and **robust** LLM workflow for anime subtitle file translation.
     chmod +x run.sh
     ```
 
-    编辑启动脚本，填入 API Key, Base URL 等信息。  
+    编辑启动脚本，**配置环境变量**，详见下方说明。
 
 3. 运行。
 
     ```bash
-    ./run.sh 
+    ./run.sh [-o <output file path>] <srt or ass file> [bangumi subject id]
+    # 例: 
+    # - 直接翻译字幕，不提供背景信息，不指定输出路径:
+    #   ./run.sh ./demo/zenshuu_06.ass
+    #   (不指定输出路径则默认输出到同目录下 output_chs.ass)
+    #
+    # - 提供背景信息(来自 bgm.tv, 例如 https://bgm.tv/subject/486039 中 subject id 为 486039 )，翻译字幕: 
+    #   ./run.sh ./demo/zenshuu_06.ass 486039
+    #
+    # - 指定输出路径: 
+    #   ./run.sh -o ./demo/my.ass ./demo/zenshuu_06.ass 486039
     ```
+
+## 环境变量配置
+
+待完善 （；´д｀）ゞ...  
