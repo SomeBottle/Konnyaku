@@ -75,13 +75,16 @@ class Translator:
             "2. 否则**必须**把假名转换为**英文字母拼写的罗马音**。\n\n"
             "【字幕格式】\n"
             "字幕片段以 <sub> 开头，以 </sub> 结尾，每行格式为 [台词编号]一句台词 。\n\n"
+            "【输入格式】\n"
+            "1. <prev> 和 </prev> 之间为**上一批翻译**的最后几句台词。\n"
+            "2. <sub> 和 </sub> 之间为本次需要翻译的台词。\n\n"
             "【字幕翻译规则】\n"
-            '1. 如果输入的 <sub> 或 </sub> 有缺失，**必须**仅返回一个字母"f"。\n'
-            "2. 在翻译后**必须**以和字幕格式同样的格式返回。\n"
-            f"3. 台词中的换行符已经用 {self.sub.line_break_holder} 替代，请保留。\n"
-            "   * 请**不要混淆圆括号和方括号**，多加检查。\n"
-            "4. 必须保持**台词编号和输入的一致**。\n"
-            "5. 日文**必须**遵循假名翻译规则。\n\n"
+            '1. 如果输入中的 <sub> 或 </sub> 有缺失，**必须**仅返回一个字母"f"。\n'
+            "2. 在翻译后**必须**以和【字幕格式】同样的格式返回。\n"
+            "3. 台词是分批翻译的，如果有上一批的台词，你必须保证翻译**衔接通顺**。\n"
+            f"4. 台词中的换行符已经用 {self.sub.line_break_holder} 替代，请保留。\n"
+            "5. 必须保持**台词编号和输入的一致**。\n"
+            "6. 日文**必须**遵循假名翻译规则。\n\n"
         )
 
         messages.append({"role": "system", "content": sys_prompt})
@@ -251,17 +254,17 @@ class Translator:
             # 生成提示词
             messages = self._gen_prompt()
 
-            # 把上一批的最后三行加入提示词，防止上下文主语丢失
-            numbered_last_three_lines = self.sub.tail_translated(n=3, numbered=True)
-            if len(numbered_last_three_lines) > 0:
-                txt = "\n".join(numbered_last_three_lines)
-                messages.append(
-                    {"role": "assistant", "content": f"<sub>\n{txt}\n</sub>"}
-                )
+            user_input = ""
 
-            messages.append(
-                {"role": "user", "content": f"<sub>\n{numbered_sub_lines}\n</sub>"}
-            )
+            # 把上一批的最后 5 行加入提示词，防止上下文断开
+            numbered_last_5_lines = self.sub.tail_translated(n=5, numbered=True)
+            if len(numbered_last_5_lines) > 0:
+                prev_sub_lines = "\n".join(numbered_last_5_lines)
+                user_input += f"<prev>\n{prev_sub_lines}\n</prev>\n"
+
+            user_input += f"<sub>\n{numbered_sub_lines}\n</sub>"
+
+            messages.append({"role": "user", "content": user_input})
 
             try:
                 response = self.trans_llm.call(messages)

@@ -8,7 +8,7 @@ import re
 from os import path
 from konnyaku.errors import TranslateMismatchException
 
-LINE_BREAK_HOLDER = "[N]"
+LINE_BREAK_HOLDER = "/N"
 
 
 class Sub:
