@@ -3,7 +3,7 @@
 # ------------- CONFIGURATION START
 
 # See https://bangumi.github.io/api/
-export KYK_BANGUMI_API_KEY=
+export KYK_BANGUMI_API_TOKEN=
 
 export KYK_LLM_API_KEY=
 export KYK_LLM_API_BASE_URL=

@@ -7,7 +7,7 @@ Bangumi API 接入模块
 import requests
 
 from time import sleep
-from konnyaku.config import BANGUMI_API_KEY
+from konnyaku.config import BANGUMI_API_TOKEN
 
 BANGUMI_API_URL = "https://api.bgm.tv"
 BANGUMI_API_VERSION = "v0"
@@ -20,15 +20,15 @@ class BangumiAPI:
     Bangumi API 接入类
     """
 
-    def __init__(self, api_key: str = None):
+    def __init__(self, api_token: str = None):
         """
         初始化
 
         :param api_key: Bangumi API Key，如果不提供则从环境变量中读取
         """
-        self.api_key = BANGUMI_API_KEY
-        if api_key:
-            self.api_key = api_key
+        self.api_token = BANGUMI_API_TOKEN
+        if api_token:
+            self.api_token = api_token
 
     def _get(self, url: str) -> dict:
         """
@@ -38,7 +38,7 @@ class BangumiAPI:
         :return: 请求结果
         :raises requests.HTTPError: 请求异常
         """
-        headers = {"Authorization": f"Bearer {self.api_key}", "User-Agent": USER_AGENT}
+        headers = {"Authorization": f"Bearer {self.api_token}", "User-Agent": USER_AGENT}
         response = requests.get(url, headers=headers)
         response.raise_for_status()
         return response.json()

@@ -7,7 +7,7 @@ from os import environ
 # API 请求异常时的重试次数
 MAX_RETRY_TIMES = int(environ.get("KYK_MAX_RETRY_TIMES", 3))
 
-# 重试等待的时间随机区间（秒）
+# API 请求重试等待的时间随机区间（秒）
 RETRY_WAIT_RANGE = (2, 6)
 
 # LLM API Key
@@ -36,8 +36,8 @@ SUMMARY_LLM_API_STREAMING = environ.get("KYK_SUM_LLM_API_STREAMING", "0") == "1"
 
 # 主要用于抓取动画番剧基本信息，给大模型翻译提供背景信息
 # 如果留空则不会有这些背景知识
-# Bangumi.tv API Key
-BANGUMI_API_KEY = environ.get("KYK_BANGUMI_API_KEY")
+# Bangumi.tv API Token
+BANGUMI_API_TOKEN = environ.get("KYK_BANGUMI_API_TOKEN")
 
 # 翻译系统前置提示词（后面还有一部分写死的系统提示词）
 TRANSLATE_SYSTEM_PREPROMPT = (
