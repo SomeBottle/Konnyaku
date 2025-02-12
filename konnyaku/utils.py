@@ -69,9 +69,17 @@ def extract_bangumi_info(subject_id: str) -> str:
 
     # 角色信息
     if len(character_infos) > 0:
-        result += "角色(日文名 / 中文名 / 角色分类 / 性别)\n----------------\n"
+        result += "<角色信息>\n| 名字 | 担当 | 性别 |\n| --- | --- | --- | --- |\n"
         for character in character_infos:
-            result += f"({character['name']} / {character['name_chs']} / {character['relation']} / {character['gender']})\n"
+            result += f"| {character['name']} | {character['relation']} | {character['gender']} |\n"
+        result += "</角色信息>\n"
+
+        # 角色术语表
+        result += "\n<角色术语表>\n"
+        for character in character_infos:
+            if character["name_chs"]:
+                result += f"{character['name']} -> {character['name_chs']}\n"
+        result += "</角色术语表>\n"
 
     return result
 

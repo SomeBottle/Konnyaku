@@ -20,8 +20,7 @@ LLM_API_BASE_URL = environ.get("KYK_LLM_API_BASE_URL", None)
 LLM_MODEL = environ.get("KYK_LLM_MODEL")
 
 # LLM Temperature
-# 此处根据 DeepSeek 的建议，翻译场景下默认设置为 1.3
-LLM_TEMPERATURE = environ.get("KYK_LLM_TEMPERATURE", 1.3)
+LLM_TEMPERATURE = environ.get("KYK_LLM_TEMPERATURE", 1.0)
 
 # 是否使用流式 API
 LLM_API_STREAMING = environ.get("KYK_LLM_API_STREAMING", "0") == "1"
@@ -31,7 +30,7 @@ LLM_API_STREAMING = environ.get("KYK_LLM_API_STREAMING", "0") == "1"
 SUMMARY_LLM_API_KEY = environ.get("KYK_SUM_LLM_API_KEY")
 SUMMARY_LLM_API_BASE_URL = environ.get("KYK_SUM_LLM_API_BASE_URL", None)
 SUMMARY_LLM_MODEL = environ.get("KYK_SUM_LLM_MODEL")
-SUMMARY_LLM_TEMPERATURE = environ.get("KYK_SUM_LLM_TEMPERATURE", 1.3)
+SUMMARY_LLM_TEMPERATURE = environ.get("KYK_SUM_LLM_TEMPERATURE", 1.0)
 SUMMARY_LLM_API_STREAMING = environ.get("KYK_SUM_LLM_API_STREAMING", "0") == "1"
 
 
@@ -40,14 +39,15 @@ SUMMARY_LLM_API_STREAMING = environ.get("KYK_SUM_LLM_API_STREAMING", "0") == "1"
 # Bangumi.tv API Key
 BANGUMI_API_KEY = environ.get("KYK_BANGUMI_API_KEY")
 
-# 翻译系统提示词
-TRANSLATE_SYSTEM_PROMPT = (
+# 翻译系统前置提示词（后面还有一部分写死的系统提示词）
+TRANSLATE_SYSTEM_PREPROMPT = (
+    "【角色定义】\n"
     "你是动漫高手，熟练掌握了多国语言。\n"
-    "你需要把用户给出的动画字幕片段中的台词翻译为中文，尽量翻译得通顺自然，保持上下文连贯性，并符合二次元文化的表达方式。\n"
+    "你擅长把用户给出的动画字幕片段中的台词翻译为中文，且尽量翻译得**通顺自然**，能保持**上下文连贯性**，并**符合二次元文化的表达方式**。\n\n"
 )
 
 # 一次翻译多少行字幕
-TRANSLATE_LINES_PER_REQUEST = 50
+TRANSLATE_LINES_PER_REQUEST = 40
 
 
 # 检查配置项

@@ -99,7 +99,7 @@ class Sub:
 
     def append_translated(self, translated_lines: list[str], expected_last_index: int):
         """
-        解析并添加已翻译行
+        解析并添加已翻译行。添加前会进行检查，确保序号连续且正确，否则会抛出异常请求重新翻译
 
         :param translated_lines: 已翻译行，带编号，每行格式为 [编号]一句台词
         :param expected_last_index: 期望的最后一行序号

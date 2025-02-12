@@ -20,7 +20,7 @@ class LLM:
         base_url: str = None,
         model: str = None,
         streaming: bool = False,
-        temperature: float = 1.3,
+        temperature: float = 1.0,
     ):
         """
         初始化模型

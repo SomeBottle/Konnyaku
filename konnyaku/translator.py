@@ -7,7 +7,7 @@ import re
 from konnyaku.subs import Sub
 from konnyaku.llm import LLM
 from konnyaku.config import (
-    TRANSLATE_SYSTEM_PROMPT,
+    TRANSLATE_SYSTEM_PREPROMPT,
     TRANSLATE_LINES_PER_REQUEST,
 )
 from konnyaku.errors import (
@@ -53,29 +53,35 @@ class Translator:
         :return: 提示词 messages 列表
         """
         messages = []
-        sys_prompt = TRANSLATE_SYSTEM_PROMPT
+        sys_prompt = TRANSLATE_SYSTEM_PREPROMPT
+
+        # 示例角色信息
+        sys_prompt += (
+            "【术语表示例】\n"
+            "<角色术语表>\n"
+            "千反田える -> 千反田爱瑠\n"
+            "</角色术语表>\n\n"
+        )
 
         if self.bgm_subject_info:
-            sys_prompt += (
-                "下方是作品的背景知识，供参考：\n"
-                f"<背景知识>\n{self.bgm_subject_info}\n</背景知识>\n\n"
-            )
+            sys_prompt += "【作品背景知识】\n" f"\n{self.bgm_subject_info}\n\n"
 
         if self.summary_text:
-            sys_prompt += (
-                "下方是上文已经翻译的部分剧情摘要，供参考：\n"
-                f"<摘要>\n{self.summary_text}\n</摘要>\n\n"
-            )
+            sys_prompt += "【前情提要】\n" f"{self.summary_text}\n\n"
 
         sys_prompt += (
-            "字幕片段以 <sub> 开头，以 </sub> 结尾，每行格式为 [编号]一句台词 。\n"
+            "【日文假名翻译规则】\n"
+            "1. 若 角色术语表、前情提要 或 上下文 中**能找到假名对应的中文名**时，使用该中文名。\n"
+            "2. 否则**必须**把假名转换为**英文字母拼写的罗马音**。\n\n"
+            "【字幕格式】\n"
+            "字幕片段以 <sub> 开头，以 </sub> 结尾，每行格式为 [台词编号]一句台词 。\n\n"
             "【字幕翻译规则】\n"
-            "* 在翻译后**必须**以同样的格式返回。\n"
-            '* 如果输入的 <sub> 或 </sub> 有缺失，**必须**仅返回"f"。\n'
-            f"* 台词中的换行符已经用 {self.sub.line_break_holder} 替代，请保留。\n\n"
-            "【片假名翻译规则】\n"
-            "1. 当背景知识和上下文中存在片假名对应的中文译名时，直接使用该中文名称\n"
-            "2. 当片假名找不到中文译名时，必须转换为**英文字母**拼写的**罗马音**\n"
+            '1. 如果输入的 <sub> 或 </sub> 有缺失，**必须**仅返回一个字母"f"。\n'
+            "2. 在翻译后**必须**以和字幕格式同样的格式返回。\n"
+            f"3. 台词中的换行符已经用 {self.sub.line_break_holder} 替代，请保留。\n"
+            "   * 请**不要混淆圆括号和方括号**，多加检查。\n"
+            "4. 必须保持**台词编号和输入的一致**。\n"
+            "5. 日文**必须**遵循假名翻译规则。\n\n"
         )
 
         messages.append({"role": "system", "content": sys_prompt})
@@ -87,8 +93,8 @@ class Translator:
                 "content": (
                     "<sub>\n"
                     "[3]今夜は月が綺麗ですね\n"
-                    "[4]もう何も怖くない\n"
-                    "[5]私、気になります！\n"
+                    f"[4]（巴マミ）{self.sub.line_break_holder}もう何も怖くない\n"
+                    "[5]（千反田える）私、気になります！\n"
                     "</sub>"
                 ),
             }
@@ -99,8 +105,8 @@ class Translator:
                 "content": (
                     "<sub>\n"
                     "[3]今晚的月色真美啊\n"
-                    "[4]已经没什么好怕的了\n"
-                    "[5]我很好奇！\n"
+                    f"[4]（巴Mami）{self.sub.line_break_holder}已经没什么好怕的了\n"
+                    "[5]（千反田爱瑠）我很好奇！\n"
                     "</sub>"
                 ),
             }
@@ -135,10 +141,24 @@ class Translator:
         print("Summarizing~")
         # 摘要总结系统提示词
         SUMMARY_SYSTEM_PROMPT = (
-            "你是擅长剧情总结的助理。\n"
-            "你需要根据用户给出的<摘要>和<台词>（台词一行一句），以**精炼扼要**的语言总结为**一句话**，要求能涵盖剧情要点和基本角色，切记**要保留之前摘要的内容**。\n"
-            "* 输出内容大纲：“(列出**所有出现的角色名**) ... (发生了什么) ... (角色们之前干了什么) ... (角色们接下来要做什么)”\n"
-            "* 请注意，你的输出**必须**以<summary>开头，以</summary>结尾\n"
+            "【角色定义】\n"
+            "你是一个专业剧情分析师，擅长从复杂内容中提取核心信息。\n\n"
+            "【输入来源】\n"
+            "需整合用户提供的：\n"
+            "1. <前情提要>：已有的故事背景与铺垫\n"
+            "2. <台词>：每行一句的对话或描述\n\n"
+            "【输出要求】\n"
+            "用**精炼扼要的一句话**完成总结，必须包含：\n"
+            "1. 核心剧情进展（关键转折）\n"
+            "2. 涉及的角色（包括前情提要，**所有出现的角色都必须**写出来）\n"
+            "3. 角色之间的主要戏剧冲突\n"
+            "4. 如果有前情提要，必须在**前情提要的基础上**延续总结\n\n"
+            "【强制格式】\n"
+            "必须按此模板输出：\n"
+            "<summary>【角色A | 角色B | ...】剧情主体（需体现因果逻辑，**必须遵循上方的输出要求**）</summary>\n"
+            "* 必须以 <summary> 开头，以 </summary> 结尾\n\n"
+            "【禁忌】\n"
+            "× 禁止添加主观解读 × 禁止使用比喻修辞 × 避免时间状语"
         )
 
         messages = [{"role": "system", "content": SUMMARY_SYSTEM_PROMPT}]
@@ -146,7 +166,7 @@ class Translator:
         prompt_text = ""
 
         if self.summary_text:
-            prompt_text += f"<摘要>\n{self.summary_text}\n</摘要>\n"
+            prompt_text += f"<前情提要>\n{self.summary_text}\n</前情提要>\n"
 
         prompt_text += "<台词>\n"
         for line in sub_lines:
@@ -245,14 +265,6 @@ class Translator:
 
             try:
                 response = self.trans_llm.call(messages)
-                """
-                如果正常，此处 response 格式为:
-                <sub>
-                [3]今晚的月色真美啊
-                [4]已经没什么好怕的了
-                [5]我很好奇！
-                </sub>
-                """
                 # 请求成功了，重置退避
                 rate_sleeper.reset()
                 tr_sleeper.reset()

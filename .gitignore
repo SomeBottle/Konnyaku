@@ -3,3 +3,4 @@ test_*.ass
 test_*.srt
 test.py
 *.pyc
+run.sh
