@@ -2,10 +2,10 @@
 
 ![Konnyaku](./image/translate_konnyaku.jpg)  
 
-A simple and **robust** LLM workflow for anime subtitle file translation.  
-s
+A simple and **robust** LLM workflow for anime subtitle file translation.
+
 简单而稳定的动画字幕翻译脚本。
-s
+
 > 老实说翻译魔芋这东西我是真想要，吃一口直接能阅片无数了，畅游全球啊有木有 (ง ื▿ ื)ว  
 
 ## 演示视频
