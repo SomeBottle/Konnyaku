@@ -10,7 +10,7 @@ A simple and **robust** LLM workflow for anime subtitle file translation.
 
 ## 演示视频
 
-https://github.com/user-attachments/assets/83bfa703-2994-44b6-bd37-1e299ed99c84
+https://github.com/user-attachments/assets/3892c5c6-5870-41fe-92fa-6788b3bc0321  
 
 ## 特色
 
