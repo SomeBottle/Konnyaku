@@ -19,14 +19,19 @@ from konnyaku.llm import LLM
 from konnyaku.utils import extract_bangumi_info
 from konnyaku.errors import TranslateError
 
-if __name__ == "__main__":
+
+def main():
     arg_parser = argparse.ArgumentParser(
-        usage="python -m konnyaku [-h] [-o OUTPUT] input [bgm_subject_id]"
+        usage="python -m konnyaku [-h] [-o output_subtitle_path] <input_subtitle_path> [bgm_subject_id]"
     )
 
     # 添加位置参数
     arg_parser.add_argument(
-        "input", type=str, help="Input subtitle file path (srt or ass)", nargs=1
+        "input",
+        type=str,
+        help="Input subtitle file path (srt or ass)",
+        nargs=1,
+        metavar="input_subtitle_path",
     )
     arg_parser.add_argument(
         "bgm_subject_id", type=str, help="Bangumi subject id", nargs="?"
@@ -110,3 +115,7 @@ if __name__ == "__main__":
 
     print("Exporting...(´∀`)")
     sub.export(args.output)
+
+
+if __name__ == "__main__":
+    main()

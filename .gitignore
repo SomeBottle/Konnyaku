@@ -4,3 +4,4 @@ test_*.srt
 test.py
 *.pyc
 run.sh
+dist/*

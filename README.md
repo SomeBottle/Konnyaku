@@ -34,6 +34,12 @@ https://github.com/user-attachments/assets/83bfa703-2994-44b6-bd37-1e299ed99c84
     pip install -r requirements.txt
     ```
 
+    或者**直接通过 `pip` 安装**。  
+
+    ```bash
+    pip install konnyaku
+    ```
+
 2. 新建启动脚本。  
 
     ```bash

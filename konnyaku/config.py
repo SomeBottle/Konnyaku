@@ -49,13 +49,15 @@ TRANSLATE_SYSTEM_PREPROMPT = (
 # 一次翻译多少行字幕
 TRANSLATE_LINES_PER_REQUEST = 40
 
+# 关于环境变量的帮助信息
+ENV_HELP_MSG = "\nPlease set necessary environment variables, see: https://github.com/SomeBottle/Konnyaku/blob/main/README.md \n"
+
 
 # 检查配置项
 def check_config():
     if not LLM_API_KEY:
-        raise ValueError("KYK_LLM_API_KEY is not set")
+        raise ValueError("KYK_LLM_API_KEY is not set" + ENV_HELP_MSG)
     if not LLM_API_BASE_URL:
-        raise ValueError("KYK_LLM_API_BASE_URL is not set")
+        raise ValueError("KYK_LLM_API_BASE_URL is not set" + ENV_HELP_MSG)
     if not LLM_MODEL:
-        raise ValueError("KYK_LLM_MODEL is not set")
-    
+        raise ValueError("KYK_LLM_MODEL is not set" + ENV_HELP_MSG)
