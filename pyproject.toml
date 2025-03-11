@@ -1,6 +1,6 @@
 [project]
 name = "konnyaku"
-version = "1.0.3"
+version = "1.0.4"
 description = "A simple and robust LLM workflow for anime subtitle file translation."
 authors = [{name = "SomeBottle"}]
 license = "MIT"

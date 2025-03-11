@@ -3,12 +3,14 @@
 """
 
 import re
+import random
 
 from konnyaku.subs import Sub
 from konnyaku.llm import LLM
 from konnyaku.config import (
     TRANSLATE_SYSTEM_PREPROMPT,
     TRANSLATE_LINES_PER_REQUEST,
+    MIN_TRANSLATE_LINES_PER_REQUEST,
 )
 from konnyaku.errors import (
     RateLimitException,
@@ -46,10 +48,11 @@ class Translator:
         self.trans_llm = trans_llm
         self.summary_llm = summary_llm
 
-    def _gen_prompt(self) -> list[dict]:
+    def _gen_prompt(self, extra_system_prompt: str = "") -> list[dict]:
         """
         生成提示词
 
+        :param extra_system_prompt: 额外的系统提示词
         :return: 提示词 messages 列表
         """
         messages = []
@@ -86,6 +89,9 @@ class Translator:
             "5. 必须保持**台词编号和输入的一致**。\n"
             "6. 日文**必须**遵循假名翻译规则。\n\n"
         )
+
+        if extra_system_prompt:
+            sys_prompt += f"\n\n{extra_system_prompt}"
 
         messages.append({"role": "system", "content": sys_prompt})
 
@@ -245,6 +251,9 @@ class Translator:
 
         print("Start translating...(ﾉ≧ڡ≦)")
 
+        # 额外附加的系统提示词，主要用于纠正模型行为
+        extra_system_prompts = ""
+
         # 取出一批进行翻译
         while processed_lines < sub_len:
             numbered_sub_lines = self.sub.get_numbered_lines(
@@ -252,7 +261,9 @@ class Translator:
             )
 
             # 生成提示词
-            messages = self._gen_prompt()
+            messages = self._gen_prompt(extra_system_prompt=extra_system_prompts)
+
+            extra_system_prompts = ""
 
             user_input = ""
 
@@ -312,7 +323,7 @@ class Translator:
                     self.sub.append_translated(
                         numbered_translated_lines, expected_last_index
                     )
-                    # 退避翻译的行数
+                    # 实际翻译的行数
                     lines_per_request = len(numbered_translated_lines)
                     print("Output was truncated, will request less lines...(๑•́︿•̀๑)")
                 else:
@@ -337,6 +348,14 @@ class Translator:
                 # 漏翻了，修正 processed_lines，重新翻译漏翻的部分
                 print(f"Translate line mismatch: {e}, fixing...")
                 processed_lines = e.next_index
+                # 漏翻可能是因为大模型幻觉，给一批翻译的台词数添加一些抖动来进行缓解
+                lines_per_request += random.randint(-15, 15)
+                lines_per_request = max(
+                    lines_per_request, MIN_TRANSLATE_LINES_PER_REQUEST
+                )
+                lines_per_request = min(
+                    lines_per_request, TRANSLATE_LINES_PER_REQUEST + 30
+                )
                 continue
 
             except SummarizeError as e:
@@ -362,6 +381,7 @@ class Translator:
                 print("Unexpected error ocurred...(╥﹏╥)")
                 raise TranslateError(e)
 
+            # 更新已经处理的行数
             processed_lines += lines_per_request
 
             print(

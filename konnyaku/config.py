@@ -47,7 +47,8 @@ TRANSLATE_SYSTEM_PREPROMPT = (
 )
 
 # 一次翻译多少行字幕
-TRANSLATE_LINES_PER_REQUEST = 40
+TRANSLATE_LINES_PER_REQUEST = int(environ.get("KYK_TRANSLATE_LINES_PER_REQUEST", 40))
+MIN_TRANSLATE_LINES_PER_REQUEST = 20
 
 # 关于环境变量的帮助信息
 ENV_HELP_MSG = "\nPlease set necessary environment variables, see: https://github.com/SomeBottle/Konnyaku/blob/main/README.md \n"
@@ -61,3 +62,7 @@ def check_config():
         raise ValueError("KYK_LLM_API_BASE_URL is not set" + ENV_HELP_MSG)
     if not LLM_MODEL:
         raise ValueError("KYK_LLM_MODEL is not set" + ENV_HELP_MSG)
+    if TRANSLATE_LINES_PER_REQUEST < MIN_TRANSLATE_LINES_PER_REQUEST:
+        # 一次翻译的行数不能少于 MIN_TRANSLATE_LINES_PER_REQUEST 行
+        raise ValueError("KYK_TRANSLATE_LINES_PER_REQUEST should be equal or greater than 20" + ENV_HELP_MSG)
+    
